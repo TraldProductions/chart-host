@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>Gymnastics Performance Chart</title>
+
+  <!-- ✅ Correct Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    body {
+      margin: 0;
+      padding: 12px;
+      font-family: Arial, sans-serif;
+      background-color: #ffffff;
+    }
+
+    #chart-container {
+      width: 100%;
+      height: 320px;
+    }
+
+    canvas {
+      width: 100% !important;
+      height: 100% !important;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div id="chart-container">
+    <canvas id="performanceChart"></canvas>
+  </div>
+
+  <script>
+    // -----------------------
+    // TEMPORARY TEST DATA
+    // -----------------------
+    const scores = [32.1, 33.4, 34.0, 34.8, 35.2];
+
+    const ctx = document
+      .getElementById("performanceChart")
+      .getContext("2d");
+
+    new Chart(ctx, {
+      type: "line",
+      data: {
+        labels: scores.map((_, index) => "Meet " + (index + 1)),
+        datasets: [{
+          label: "All‑Around Progress",
+          data: scores,
+          borderColor: "#6A1B9A",
+          backgroundColor: "rgba(106, 27, 154, 0.15)",
+          tension: 0.35,
+          fill: true,
+          pointRadius: 4,
+          pointHoverRadius: 6
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: true,
+            position: "top"
+          }
+        },
+        scales: {
+          y: {
+            beginAtZero: false
+          }
+        }
+      }
+    });
+  </script>
+
+</body>
+</html>
