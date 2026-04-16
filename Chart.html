@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <title>Gymnastics Performance Review</title>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    body {
+      margin: 0;
+      font-family: system-ui, Arial, sans-serif;
+      background: #ffffff;
+      overflow-x: hidden;
+    }
+
+    header {
+      padding: 12px;
+      text-align: center;
+      font-size: 18px;
+      font-weight: 600;
+      border-bottom: 1px solid #ddd;
+      background: #fff;
+    }
+
+    .tabs {
+      display: flex;
+      border-bottom: 1px solid #ddd;
+      background: #fff;
+    }
+
+    .tab {
+      flex: 1;
+      padding: 10px 6px;
+      text-align: center;
+      font-size: 14px;
+      cursor: pointer;
+      user-select: none;
+      border-right: 1px solid #eee;
+    }
+
+    .tab:last-child {
+      border-right: none;
+    }
+
+    .tab.active {
+      background: #ec407a;
+      color: #fff;
+      font-weight: 600;
+    }
+
+    #chartArea {
+      height: calc(100vh - 110px);
+      padding: 10px;
+    }
+
+    #noData {
+      text-align: center;
+      margin-top: 40px;
+      color: #777;
+      font-size: 16px;
+    }
+
+    canvas {
+      width: 100% !important;
+      height: 100% !important;
+    }
+  </style>
+</head>
+
+<body>
+
+  <header>Performance Review</header>
+
+  <div class="tabs">
+    <div class="tab active" data-event="vault">Vault</div>
+    <div class="tab" data-event="bars">Bars</div>
+    <div class="tab" data-event="beam">Beam</div>
+    <div class="tab" data-event="floor">Floor</div>
+    <div class="tab" data-event="allAround">All‑Around</div>
+  </div>
+
+  <div id="chartArea">
+    <div id="noData">Waiting for scores…</div>
+    <canvas id="chartCanvas" style="display:none;"></canvas>
+  </div>
+
+  <script>
+    // ---------------------------------------------------
+    // GLOBAL STATE
+    // ---------------------------------------------------
+    let allRows = [];
+    let currentEvent = "vault";
+    let chartInstance = null;
+
+    // ---------------------------------------------------
+    // LEVEL COLORS (Locked)
+    // ---------------------------------------------------
+    const levelColors = {
+      2: "#1976D2", // Blue
+      3: "#6A1B9A", // Purple
+      4: "#F57C00"  // Orange
+    };
+
+    // ---------------------------------------------------
+    // EVENT LABEL MAP
+    // ---------------------------------------------------
+    const eventLabels = {
+      vault: "Vault",
+      bars: "Bars",
+      beam: "Beam",
+      floor: "Floor",
+      allAround: "All‑Around"
+    };
+
+    // ---------------------------------------------------
+    // GROUP ROWS BY LEVEL
+    // ---------------------------------------------------
+    function groupByLevel(rows) {
+      const grouped = { 2: [], 3: [], 4: [] };
+
+      rows.forEach(row => {
+        const level = Number(row.level);
+        if (grouped[level]) grouped[level].push(row);
+      });
+
+      return grouped;
+    }
+
+    // ---------------------------------------------------
+    // BUILD DATASETS FOR MULTI‑LEVEL CHART
+    // ---------------------------------------------------
+    function buildDatasets(grouped, eventKey) {
+      const datasets = [];
+
+      Object.keys(grouped).forEach(level => {
+        const rows = grouped[level];
+        if (rows.length === 0) return;
+
+        const values = rows.map(r => Number(r[eventKey])).filter(v => !isNaN(v));
+        if (values.length === 0) return;
+
+        datasets.push({
+          label: `Level ${level}`,
+          data: values,
+          borderColor: levelColors[level],
+          backgroundColor: levelColors[level] + "33",
+          borderWidth: 2,
+          tension: 0.25,
+          pointRadius: 3,
+          fill: false
+        });
+      });
+
+      return datasets;
+    }
+
+    // ---------------------------------------------------
+    // RENDER CHART
+    // ---------------------------------------------------
+    function renderChart() {
+      const noDataDiv = document.getElementById("noData");
+      const canvas = document.getElementById("chartCanvas");
+
+      if (!allRows || allRows.length === 0) {
+        canvas.style.display = "none";
+        noDataDiv.textContent = "No performance data yet.";
+        noDataDiv.style.display = "block";
+        return;
+      }
+
+      const grouped = groupByLevel(allRows);
+      const datasets = buildDatasets(grouped, currentEvent);
+
+      if (datasets.length === 0) {
+        canvas.style.display = "none";
+        noDataDiv.textContent = "No data yet for this event.";
+        noDataDiv.style.display = "block";
+        return;
+      }
+
+      noDataDiv.style.display = "none";
+      canvas.style.display = "block";
+
+      const maxLength = Math.max(...datasets.map(ds => ds.data.length));
+      const labels = Array.from({ length: maxLength }, (_, i) => `Meet ${i + 1}`);
+
+      const ctx = canvas.getContext("2d");
+
+      if (chartInstance) chartInstance.destroy();
+
+      chartInstance = new Chart(ctx, {
+        type: "line",
+        data: { labels, datasets },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: true, position: "top" }
+          },
+          scales: {
+            y: {
+              min: 7.0,
+              max: 10.0,
+              ticks: { stepSize: 0.1 },
+              title: { display: true, text: "Score" }
+            }
+          }
+        }
+      });
+    }
+
+    // ---------------------------------------------------
+    // TAB CLICK HANDLING
+    // ---------------------------------------------------
+    document.querySelectorAll(".tab").forEach(tab => {
+      tab.addEventListener("click", () => {
+        document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+        tab.classList.add("active");
+
+        currentEvent = tab.dataset.event;
+        renderChart();
+      });
+    });
+
+    // ---------------------------------------------------
+    // RECEIVE DATA FROM THUNKABLE WEBVIEWER
+    // ---------------------------------------------------
+    window.addEventListener("message", function(event) {
+      try {
+        const data = typeof event.data === "string" ? JSON.parse(event.data) : event.data;
+        if (!Array.isArray(data)) return;
+
+        allRows = data;
+        renderChart();
+      } catch (e) {
+        console.error("Error parsing incoming data:", e);
+      }
+    });
+
+  </script>
+
+</body>
+</html>
