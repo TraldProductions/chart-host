@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Performance Review</title>
+
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+        background: #ffffff;
+        text-align: center;
+    }
+
+    h2 {
+        margin-top: 20px;
+        font-size: 22px;
+        font-weight: bold;
+    }
+
+    /* Tabs container */
+    .tabs {
+        display: flex;
+        justify-content: space-around;
+        margin: 20px 10px;
+        border-bottom: 2px solid #ddd;
+        overflow-x: auto;
+        white-space: nowrap;
+    }
+
+    /* Individual tab */
+    .tab {
+        padding: 10px 14px;
+        cursor: pointer;
+        font-size: 12px; /* REDUCED FROM 16px */
+        font-weight: bold;
+        color: #555;
+        border-bottom: 3px solid transparent;
+        flex-shrink: 0;
+    }
+
+    /* Active tab */
+    .tab.active {
+        color: #EC407A;
+        border-bottom: 3px solid #EC407A;
+    }
+
+    #chartContainer {
+        width: 100%;
+        max-width: 500px;
+        margin: auto;
+        padding: 10px;
+    }
+
+    #statusMessage {
+        margin-top: 40px;
+        font-size: 18px;
+        color: #777;
+    }
+
+    button {
+        margin-top: 40px;
+        padding: 12px 20px;
+        background: #EC407A;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        font-size: 16px;
+        cursor: pointer;
+    }
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+</head>
+<body>
+
+<h2>Performance Review</h2>
+
+<!-- Tabs -->
+<div class="tabs">
+    <div class="tab active" onclick="switchTab('vault')">Vault</div>
+    <div class="tab" onclick="switchTab('bars')">Bars</div>
+    <div class="tab" onclick="switchTab('beam')">Beam</div>
+    <div class="tab" onclick="switchTab('floor')">Floor</div>
+    <div class="tab" onclick="switchTab('allAround')">AA</div> <!-- UPDATED -->
+</div>
+
+<div id="chartContainer">
+    <canvas id="chartCanvas"></canvas>
+</div>
+
+<div id="statusMessage">Waiting for scores…</div>
+
+<button onclick="window.location.href='/'">Return to Home</button>
+
+<script>
+let chartInstance = null;
+let currentTab = "vault";
+
+function switchTab(tabName) {
+    currentTab = tabName;
+
+    document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+    document.querySelector(`.tab[onclick="switchTab('${tabName}')"]`).classList.add("active");
+
+    if (window.sortedData) {
+        drawChart(window.sortedData);
+    }
+}
+
+function drawChart(rows) {
+    if (!rows || rows.length === 0) {
+        document.getElementById("statusMessage").innerText = "No scores available.";
+        return;
+    }
+
+    document.getElementById("statusMessage").style.display = "none";
+
+    const labels = rows.map(r => r.date || "");
+    const values = rows.map(r => Number(r[currentTab]) || 0);
+
+    const ctx = document.getElementById("chartCanvas").getContext("2d");
+
+    if (chartInstance) chartInstance.destroy();
+
+    chartInstance = new Chart(ctx, {
+        type: "line",
+        data: {
+            labels: labels,
+            datasets: [{
+                label: currentTab.toUpperCase(),
+                data: values,
+                borderColor: "#EC407A",
+                backgroundColor: "rgba(236,64,122,0.2)",
+                borderWidth: 3,
+                tension: 0.3
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: { beginAtZero: false }
+            }
+        }
+    });
+}
+
+window.add
