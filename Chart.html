@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>Gymnastics Performance Chart</title>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    body {
+      margin: 0;
+      padding: 12px;
+      font-family: Arial, sans-serif;
+      background-color: #ffffff;
+    }
+
+    #chart-container {
+      width: 100%;
+      height: 320px;
+    }
+
+    canvas {
+      width: 100% !important;
+      height: 100% !important;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div id="chart-container">
+    <canvas id="performanceChart"></canvas>
+  </div>
+
+  <script>
+    // ---------------------------------------------------
+    // READ LEVEL DATA FROM URL
+    // Format:
+    // #L2=7.2,7.4,7.6|L3=7.8,8.0|L4=8.2,8.4,8.6
+    // ---------------------------------------------------
+    function parseLevelData() {
+      const hash = window.location.hash.replace("#", "").trim();
+      if (!hash) return {};
+
+      const levelBlocks = hash.split("|");
+      const data = {};
+
+      levelBlocks.forEach(block => {
+        const [level, values] = block.split("=");
+        if (!level || !values) return;
+
+        data[level] = values
+          .split(",")
+          .map(Number)
+          .filter(v => !isNaN(v));
+      });
+
+      return data;
+    }
+
+    const levelData = parseLevelData();
+
+    // ---------------------------------------------------
+    // HANDLE NO DATA CASE
+    // ---------------------------------------------------
+    if (Object.keys(levelData).length === 0) {
+      document.body.innerHTML = `
+        <div style="
+          display:flex;
+          align-items:center;
+          justify-content:center;
+          height:300px;
+          font-family:Arial;
+          color:#999;
+          font-size:16px;">
+          No performance data yet
+        </div>
+      `;
+    } else {
+
+      // ---------------------------------------------------
+      // STANDARD LEVEL COLORS (LOCKED)
+      // ---------------------------------------------------
+      const levelStyles = {
+        L2: { label: "Level 2", color: "#1976D2" }, // Blue
+        L3: { label: "Level 3", color: "#6A1B9A" }, // Purple
+        L4: { label: "Level 4", color: "#F57C00" }  // Orange
+      };
+
+      // ---------------------------------------------------
+      // BUILD DATASETS
+      // ---------------------------------------------------
+      const datasets = [];
+      let maxLength = 0;
+
+      Object.keys(levelData).forEach(levelKey => {
+        const scores = levelData[levelKey];
+        maxLength = Math.max(maxLength, scores.length);
+
+        if (levelStyles[levelKey]) {
+          datasets.push({
+            label: levelStyles[levelKey].label,
+            data: scores,
+            borderColor: levelStyles[levelKey].color,
+            backgroundColor: levelStyles[levelKey].color + "33",
+            tension: 0.35,
+            fill: true,
+            pointRadius: 4,
+            pointHoverRadius: 6
+          });
+        }
+      });
+
+      const labels = Array.from(
+        { length: maxLength },
+        (_, i) => "Meet " + (i + 1)
+      );
+
+      // ---------------------------------------------------
+      // RENDER CHART
+      // ---------------------------------------------------
+      const ctx = document
+        .getElementById("performanceChart")
+        .getContext("2d");
+
+      new Chart(ctx, {
+        type: "line",
+        data: {
+          labels: labels,
+          datasets: datasets
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              display: true,
+              position: "top"
+            }
+          },
+          scales: {
+            y: {
+              min: 7.0,
+              max: 10.0,
+              ticks: {
+                stepSize: 0.1
+              },
+              title: {
+                display: true,
+                text: "Score"
+              }
+            }
+          }
+        }
+      });
+    }
+  </script>
+
+</body>
+</html>
